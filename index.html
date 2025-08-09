@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Private Chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="card" id="auth-screen">
+    <h2>Enter your access code</h2>
+    <input id="access-code" placeholder="Access Code (numbers or owner code)">
+    <button id="access-btn">Enter</button>
+    
+  <div id="owner-password-row" style="display:none; margin-top: 10px;">
+    <input id="owner-password" type="password" placeholder="Owner password" />
+    <button id="owner-pass-btn">Login as Owner</button>
+  </div>
+
+  <p id="auth-error" class="error"></p>
+</div>
+
+
+  <div class="card hidden" id="name-screen">
+    <h2>Enter display name</h2>
+    <input id="display-name" placeholder="Your display name">
+    <button id="name-btn">Continue</button>
+    <button id="name-back">Back</button>
+  </div>
+
+  <div class="card hidden" id="owner-screen">
+    <h2>Owner Dashboard</h2>
+    <ul id="room-list"></ul>
+    <button id="owner-logout">Logout</button>
+  </div>
+
+  <div class="card hidden" id="chat-screen">
+    <h2 id="chat-title">Chat</h2>
+    <div id="messages"></div>
+
+    <div class="compose">
+      <input id="message-input" placeholder="Type a message">
+      <button id="send-btn">Send</button>
+    </div>
+
+    <div class="chat-actions">
+      <button id="chat-exit">Exit</button>
+    </div>
+  </div>
+
+  <!-- Firebase compat SDK (used for simplicity) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <script src="script.js"></script>
+</body>
+</html>
