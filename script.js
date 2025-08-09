@@ -4,7 +4,7 @@
 const OWNER_CODE = "owner22shasha";
 const OWNER_PASSWORD = "elishamay22";
 
-// 10 guest codes (you provided these)
+// 10 guest codes
 const GUEST_CODES = [
   "1098630272",
   "7930752794",
@@ -18,9 +18,7 @@ const GUEST_CODES = [
   "9652975390"
 ];
 
-// ----- Your Firebase config (you gave this) -----
-// I added a reasonable Realtime DB URL using your project id (if your DB uses different url
-// edit the databaseURL below to the correct one in this file).
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyB24xX3U2wItMaRQPoM48UVJrfHSlqXyd0",
   authDomain: "msgweb-9c933.firebaseapp.com",
@@ -28,10 +26,10 @@ const firebaseConfig = {
   storageBucket: "msgweb-9c933.firebasestorage.app",
   messagingSenderId: "423078226035",
   appId: "1:423078226035:web:c682ffc7f547e233a46206",
-  databaseURL: "https://msgweb-9c933-default-rtdb.firebaseio.com" // if different, change this
+  databaseURL: "https://msgweb-9c933-default-rtdb.firebaseio.com"
 };
 
-// Initialize Firebase (compat)
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -67,11 +65,11 @@ const chatExitBtn = document.getElementById("chat-exit");
  *  STATE
  ***********************/
 let isOwner = false;
-let currentRoom = null;    // room id = for guests we use their access code; for owner we pick rooms
+let currentRoom = null;    
 let currentName = null;
 let roomsMetaWatcher = null;
 let messagesWatcher = null;
-let roomsCache = {}; // local cache of room meta
+let roomsCache = {}; 
 
 /***********************
  *  UTIL
@@ -89,7 +87,7 @@ function formatTime(ts) {
  ***********************/
 function askNotificationPermission() {
   if ("Notification" in window && Notification.permission !== "granted") {
-    Notification.requestPermission().catch(()=>{});
+    Notification.requestPermission().catch(() => {});
   }
 }
 function notify(title, body) {
@@ -107,7 +105,6 @@ accessBtn.addEventListener("click", () => {
   const code = (accessCodeEl.value || "").trim();
 
   if (code === OWNER_CODE) {
-    // Hide normal access code input/button, show owner password input
     accessCodeEl.style.display = "none";
     accessBtn.style.display = "none";
     ownerPasswordRow.style.display = "flex";
@@ -116,14 +113,12 @@ accessBtn.addEventListener("click", () => {
   }
 
   if (GUEST_CODES.includes(code)) {
-    // guest — room = code
     isOwner = false;
-    currentRoom = code; // guests will use their access code as room id
+    currentRoom = code; 
     localStorage.setItem("role", "guest");
     localStorage.setItem("room", currentRoom);
     hide(authScreen);
     show(nameScreen);
-    // if we have a stored name for this room, auto-fill
     const savedName = localStorage.getItem("name_" + currentRoom);
     if (savedName) displayNameEl.value = savedName;
     return;
@@ -136,8 +131,13 @@ ownerPassBtn.addEventListener("click", () => {
   const pass = (ownerPassInput.value || "").trim();
   if (pass === OWNER_PASSWORD) {
     isOwner = true;
-    currentRoom = null;
+    currentRoom = "owner_room"; 
+    currentName = "Sam";  // <-- Set owner name here
+
     localStorage.setItem("role", "owner");
+    localStorage.setItem("room", currentRoom);
+    localStorage.setItem("name_" + currentRoom, currentName);
+
     hide(authScreen);
     show(ownerScreen);
     askNotificationPermission();
@@ -148,7 +148,6 @@ ownerPassBtn.addEventListener("click", () => {
 });
 
 nameBackBtn.addEventListener("click", () => {
-  // go back to auth
   hide(nameScreen);
   show(authScreen);
 });
@@ -163,13 +162,13 @@ nameBtn.addEventListener("click", () => {
   localStorage.setItem("name", name);
   if (currentRoom) localStorage.setItem("name_" + currentRoom, name);
 
-  // set room meta (name if first time)
   const metaRef = db.ref(`rooms/${currentRoom}/meta`);
   metaRef.update({
     name: currentName,
     lastMessageAt: roomsCache[currentRoom]?.lastMessageAt || 0,
     ownerLastOpened: roomsCache[currentRoom]?.ownerLastOpened || 0
-  }).catch(()=>{});
+  }).catch(() => {});
+
   hide(nameScreen);
   showChatFor(currentRoom, currentName, false);
 });
@@ -178,9 +177,7 @@ nameBtn.addEventListener("click", () => {
  *  OWNER: ROOMS LIST + UNREAD
  ***********************/
 function startOwnerRoomWatcher() {
-  // listen for rooms metadata changes
   const roomsRef = db.ref("rooms");
-  // unsub any previous
   if (roomsMetaWatcher) roomsRef.off("value", roomsMetaWatcher);
   roomsMetaWatcher = roomsRef.on("value", snapshot => {
     roomListEl.innerHTML = "";
@@ -201,7 +198,6 @@ function startOwnerRoomWatcher() {
       const right = document.createElement("div");
       right.className = "right";
 
-      // unread badge if lastMessageAt > ownerLastOpened
       const last = meta.lastMessageAt || 0;
       const ownerOpened = meta.ownerLastOpened || 0;
       if (last > ownerOpened) {
@@ -217,8 +213,9 @@ function startOwnerRoomWatcher() {
       li.addEventListener("click", () => {
         hide(ownerScreen);
         isOwner = true;
-        showChatFor(roomId, "Owner", true);
-        // mark owner opened
+        // show owner name explicitly here
+        currentName = "Sam";
+        showChatFor(roomId, currentName, true);
         db.ref(`rooms/${roomId}/meta/ownerLastOpened`).set(now());
       });
 
@@ -229,7 +226,9 @@ function startOwnerRoomWatcher() {
 
 ownerLogoutBtn.addEventListener("click", () => {
   isOwner = false;
+  currentName = null;
   localStorage.removeItem("role");
+  localStorage.removeItem("name_" + currentRoom);
   hide(ownerScreen);
   show(authScreen);
 });
@@ -246,47 +245,48 @@ function showChatFor(roomId, displayName, asOwner) {
   messagesEl.innerHTML = "";
   askNotificationPermission();
 
-  // mark owner last opened if owner
   if (asOwner) {
-    db.ref(`rooms/${roomId}/meta/ownerLastOpened`).set(now()).catch(()=>{});
+    db.ref(`rooms/${roomId}/meta/ownerLastOpened`).set(now()).catch(() => { });
   }
 
-  // detach previous listener
   if (messagesWatcher) {
     const prevRef = db.ref(`rooms/${messagesWatcher.room}/messages`);
     prevRef.off("child_added", messagesWatcher.fn);
     messagesWatcher = null;
   }
 
-  // listen for messages
   const messagesRef = db.ref(`rooms/${roomId}/messages`);
   const onChildAdded = (snap) => {
     const msg = snap.val();
     appendMessageToUI(msg);
-    // if the new message belongs to someone else, and they are away, notify
-    const isOwn = (msg.sender === currentName) || (isOwner && msg.sender === "Owner");
+
+    const isOwn = (msg.sender === currentName);
     const visibleRoom = (currentRoom === roomId);
     if (!isOwn && (!document.hasFocus() || !visibleRoom)) {
-      // Owner: show badge in room list (handled by meta update)
       notify(msg.sender, msg.text);
     }
   };
   messagesRef.on("child_added", onChildAdded);
   messagesWatcher = { room: roomId, fn: onChildAdded };
 
-  // ensure meta.lastMessageAt exists
-  db.ref(`rooms/${roomId}/meta/lastMessageAt`).once("value").then(()=>{}).catch(()=>{});
+  db.ref(`rooms/${roomId}/meta/lastMessageAt`).once("value").then(() => { }).catch(() => { });
 }
 
 function appendMessageToUI(msg) {
   const div = document.createElement("div");
   div.className = "message";
-  if ( (msg.sender === currentName) || (isOwner && msg.sender === "Owner") ) div.classList.add("me");
+
+  if (msg.sender === currentName) {
+    div.classList.add("me");
+  }
+
   const content = document.createElement("div");
-  content.innerHTML = `<strong>${msg.sender}:</strong> ${escapeHtml(msg.text)}`;
+  content.innerHTML = `<strong>${escapeHtml(msg.sender)}:</strong> ${escapeHtml(msg.text)}`;
+
   const meta = document.createElement("div");
   meta.className = "meta";
   meta.textContent = formatTime(msg.timestamp || now());
+
   div.appendChild(content);
   div.appendChild(meta);
   messagesEl.appendChild(div);
@@ -296,7 +296,8 @@ function appendMessageToUI(msg) {
 sendBtn.addEventListener("click", () => {
   const text = (messageInputEl.value || "").trim();
   if (!text || !currentRoom) return;
-  const sender = isOwner ? "Owner" : (currentName || "Guest");
+
+  const sender = currentName || (isOwner ? "Sam" : "Guest");
   const ts = now();
   const msgRef = db.ref(`rooms/${currentRoom}/messages`).push();
   msgRef.set({
@@ -304,9 +305,7 @@ sendBtn.addEventListener("click", () => {
     text: text,
     timestamp: ts
   }).then(() => {
-    // update lastMessageAt
     db.ref(`rooms/${currentRoom}/meta/lastMessageAt`).set(ts);
-    // if owner isn't viewing this room, leave unread badge (owner checks it)
     messageInputEl.value = "";
   }).catch(err => {
     console.error("send err", err);
@@ -314,8 +313,8 @@ sendBtn.addEventListener("click", () => {
 });
 
 // helper to escape simple HTML
-function escapeHtml(s){ return String(s)
-  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escapeHtml(s) { return String(s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 /***********************
  *  ROOM CREATION: ensure meta exists for guest
@@ -329,7 +328,7 @@ function ensureRoomMetaForGuest(roomId, name) {
         name: name || roomId,
         lastMessageAt: 0,
         ownerLastOpened: 0
-      }).catch(()=>{});
+      }).catch(() => { });
     }
   });
 }
@@ -342,28 +341,26 @@ window.addEventListener("load", () => {
 
   const savedRole = localStorage.getItem("role");
   const savedRoom = localStorage.getItem("room");
+
   if (savedRole === "owner") {
-    // owner persisted
     isOwner = true;
+    currentName = "Sam";  // <-- Owner name reset here on reload
     hide(authScreen);
     show(ownerScreen);
     startOwnerRoomWatcher();
     return;
   }
 
-  // guest persisted?
   if (savedRole === "guest" && savedRoom) {
     const savedName = localStorage.getItem("name_" + savedRoom) || localStorage.getItem("name");
     if (savedName) {
       currentName = savedName;
       currentRoom = savedRoom;
-      // make sure meta exists
       ensureRoomMetaForGuest(currentRoom, currentName);
       hide(authScreen);
       showChatFor(currentRoom, currentName, false);
       return;
     } else {
-      // room saved but name missing -> show name screen
       currentRoom = savedRoom;
       hide(authScreen);
       show(nameScreen);
@@ -376,7 +373,6 @@ window.addEventListener("load", () => {
  *  ROOM EXIT / OWNER BACK
  ***********************/
 chatExitBtn.addEventListener("click", () => {
-  // stop listening to messages for this room
   if (messagesWatcher) {
     db.ref(`rooms/${messagesWatcher.room}/messages`).off("child_added", messagesWatcher.fn);
     messagesWatcher = null;
@@ -385,7 +381,6 @@ chatExitBtn.addEventListener("click", () => {
   if (isOwner) {
     show(ownerScreen);
   } else {
-    // guest returns to name screen (to rejoin or exit)
     show(nameScreen);
   }
 });
@@ -393,32 +388,26 @@ chatExitBtn.addEventListener("click", () => {
 /***********************
  *  Owner: update meta when new messages arrive so unread works
  ***********************/
-// Watch messages across rooms to update each room meta's lastMessageAt
 db.ref("rooms").on("child_added", snap => {
-  // ensure meta exists
   const metaRef = db.ref(`rooms/${snap.key}/meta`);
   metaRef.once("value").then(mv => {
     if (!mv.exists()) {
-      metaRef.set({ name: snap.key, lastMessageAt: 0, ownerLastOpened: 0 }).catch(()=>{});
+      metaRef.set({ name: snap.key, lastMessageAt: 0, ownerLastOpened: 0 }).catch(() => { });
     }
   });
 });
 
-// track new messages to update meta.lastMessageAt automatically (if not set by sender)
 db.ref("rooms").on("child_changed", snap => {
-  // nothing by default — messages update handler below will set lastMessageAt on send via sendBtn
+  // no default action here
 });
 
-// Also ensure that when messages are pushed (even externally), lastMessageAt is updated.
-// We'll attach listener per room when owner loads the rooms list (above) OR when a guest creates.
-// But to be safe, listen to every room's messages->child_added and set lastMessageAt
 db.ref("rooms").on("child_added", roomSnap => {
   const roomId = roomSnap.key;
   const messagesRef = db.ref(`rooms/${roomId}/messages`);
   messagesRef.on("child_added", ms => {
     const msg = ms.val();
     if (msg && msg.timestamp) {
-      db.ref(`rooms/${roomId}/meta/lastMessageAt`).set(msg.timestamp).catch(()=>{});
+      db.ref(`rooms/${roomId}/meta/lastMessageAt`).set(msg.timestamp).catch(() => { });
     }
   });
 });
@@ -429,11 +418,10 @@ db.ref("rooms").on("child_added", roomSnap => {
 accessBtn.addEventListener("click", () => {
   const code = (accessCodeEl.value || "").trim();
   if (GUEST_CODES.includes(code)) {
-    // create room meta if not exists
     const metaRef = db.ref(`rooms/${code}/meta`);
     metaRef.once("value").then(snap => {
       if (!snap.exists()) {
-        metaRef.set({ name: code, lastMessageAt: 0, ownerLastOpened: 0 }).catch(()=>{});
+        metaRef.set({ name: code, lastMessageAt: 0, ownerLastOpened: 0 }).catch(() => { });
       }
     });
     localStorage.setItem("room", code);
@@ -443,7 +431,6 @@ accessBtn.addEventListener("click", () => {
 /***********************
  *  Small UX niceties
  ***********************/
-// allow pressing Enter on inputs
 [accessCodeEl, ownerPassInput].forEach(el => {
   el.addEventListener("keyup", e => { if (e.key === "Enter") accessBtn.click(); });
 });
@@ -451,5 +438,4 @@ ownerPassInput.addEventListener("keyup", e => { if (e.key === "Enter") ownerPass
 displayNameEl.addEventListener("keyup", e => { if (e.key === "Enter") nameBtn.click(); });
 messageInputEl.addEventListener("keyup", e => { if (e.key === "Enter") sendBtn.click(); });
 
-// small focus
 accessCodeEl.focus();
