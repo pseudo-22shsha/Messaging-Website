@@ -1,6 +1,6 @@
 :root {
   --card-w: 360px;
-  --accent: #007bff;
+  --accent: linear-gradient(45deg, #FFC0CB, #FF1493);
   --muted: #666;
 }
 
@@ -11,7 +11,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f2f4f7;
+  background: white;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
@@ -36,6 +36,13 @@ input {
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 14px;
+  outline: none;
+  transition: transform 0.2s ease, border-color 0.2s ease; /* smooth animation */
+}
+
+input:focus {
+  transform: scale(1.05); /* makes it slightly bigger */
+  border-color: #FF1493; /* optional: also highlight border */
 }
 
 button {
@@ -54,6 +61,12 @@ button.secondary {
   background: #f0f0f0;
   color: #222;
 }
+button:active {
+  background-color: linear-gradient(45deg, #FFC0CB, #FF1493);;
+}
+#send-btn {
+ margin-bottom: 10px;
+}
 
 .hidden { display: none; }
 .error { color: #c33; text-align: center; margin-top: 8px; font-size: 13px; }
@@ -61,14 +74,18 @@ button.secondary {
 #owner-password-row { display: flex; gap: 8px; margin-top: 10px; }
 #owner-password-row input { flex: 1; }
 #owner-password-row button { width: auto; padding: 10px 12px; }
-
+#chat-screen{
+  height: 100vh;
+  width: 100%;
+  background-color: white;
+}
 #messages {
-  height: 340px;
+  height: 85%;
   overflow-y: auto;
   border: 1px solid #eee;
   padding: 10px;
   border-radius: 8px;
-  background: #fbfdff;
+  background: #FFE4E1;
   margin-bottom: 10px;
 }
 
